@@ -1,8 +1,20 @@
+import os
 import time
 from urllib import request, parse
 import yaml
 import json
 from slack_sdk import WebClient
+import logging
+
+# logフォルダが存在しない場合は作成
+os.makedirs('log', exist_ok=True)
+
+# ログ設定
+logger = logging.getLogger("switch2_notifier")
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler("log/switch2_notifier.log", encoding='utf-8')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
 
 # params.yamlを読み込み
 with open('params.yaml', 'r', encoding='utf-8') as f:
@@ -41,9 +53,13 @@ class RakutenStockChecker:
               '&booksGenreId=' + booksGenreId + \
               '&outOfStockFlag=' + outOfStockFlag
         
-        print(f"URL: {url}")
-        response = request.urlopen(url)
-        data = json.loads(response.read().decode('utf-8'))
+        try:
+            response = request.urlopen(url)
+            data = json.loads(response.read().decode('utf-8'))
+            logger.info("succeeed checking! URL: ", url)
+        except Exception as e:
+            logger.error(f"楽天API使用時にエラー発生: {e}")
+            return
 
         if self.first_time:
             self.first_time = False
@@ -61,6 +77,7 @@ class RakutenStockChecker:
                     availability = '在庫あり'
                 else:
                     availability = '不明な状態　要チェック！'
+                    logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
                 message += "--------------------\n" \
                             "商品名: " + item_info['title'] + "\n" \
@@ -72,13 +89,27 @@ class RakutenStockChecker:
                         "5分ごとにチェックして、何か動きがあればお知らせします！\n"
             
             for user in send_user:
-                res = self.client.conversations_open(users=user)
-                channel_id = res['channel']['id']
-                print(f"Channel ID: {channel_id}")
-                self.client.chat_postMessage(
-                    channel=channel_id,
-                    text=message
-                )
+                try:
+                    res = self.client.conversations_open(users=user)
+                    channel_id = res['channel']['id']
+                    print(f"Channel ID: {channel_id}")
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=message
+                    )
+                except Exception as e:
+                    logger.error(f"Slackメッセージ送信エラー: {e}")
+                    logger.info("送信しようとしたメッセージ: ", message)
+                    debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
+
+                    res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
+                    channel_id = res['channel']['id']
+                    print(f"Channel ID: {channel_id}")
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=debug_message
+                    )
+                    continue
             
             self.first_time = False
 
@@ -97,6 +128,7 @@ class RakutenStockChecker:
                     availability = '在庫あり'
                 else:
                     availability = '不明な状態　要チェック！'
+                    logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
                 if not is_changed:
                     message = "Nintendo Switch 2の販売状況に動きがありました！ \n"
@@ -111,28 +143,35 @@ class RakutenStockChecker:
                         "以上です。売り切れなければ、5分後にまたお知らせします！\n"
 
             for user in send_user:
-                res = self.client.conversations_open(users=user)
-                channel_id = res['channel']['id']
-                print(f"Channel ID: {channel_id}")
-                self.client.chat_postMessage(
-                    channel=channel_id,
-                    text=message
-                )
+                try:
+                    res = self.client.conversations_open(users=user)
+                    channel_id = res['channel']['id']
+                    print(f"Channel ID: {channel_id}")
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=message
+                    )
+                except Exception as e:
+                    logger.error(f"Slackメッセージ送信エラー: {e}")
+                    logger.info("送信しようとしたメッセージ: ", message)
+                    debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
+
+                    res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
+                    channel_id = res['channel']['id']
+                    print(f"Channel ID: {channel_id}")
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=debug_message
+                    )
+                    continue
 
 
 def main():
     """メイン関数"""
-    # try:
-    #     # Socket Modeでアプリを起動
-    #     logger.info("Slack Bot を起動しています...")
-    # handler = SocketModeHandler(app, SLACK_APP_LEVEL_TOKEN)
-    # handler.start()
-    # except Exception as e:
-    #     logger.error(f"アプリ起動エラー: {e}")
     checker = RakutenStockChecker()
     while True:
         checker.monitor_stock()
-        time.sleep(30)  # 5分ごとにチェック
+        time.sleep(300)  # 5分ごとにチェック
 
 if __name__ == "__main__":
     main()
