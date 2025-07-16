@@ -1,0 +1,10 @@
+[project]
+name = "switch2-checker"
+version = "0.1.0"
+description = "楽天ブックスのswitch2販売状況をスクレイピングするアプリ"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0.2",
+    "slack-bolt>=1.23.0",
+]
