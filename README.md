@@ -65,9 +65,8 @@ rakuten-api-app-id: "YOUR_RAKUTEN_APP_ID"
 SLACK_BOT_USER_OAUTH_TOKEN: "xoxb-your-bot-token"
 
 # 通知先ユーザー（ユーザーIDのリスト）
-send_user:
-  - "Uxxxxxxxxx1"  # SlackユーザーID
-  - "Uxxxxxxxxx2"  # 複数指定可能
+send_user: ["Uxxxxxxxxx1",  # SlackユーザーID
+            "Uxxxxxxxxx2"]  # 複数指定可能
 ```
 
 なお、ユーザーIDは以下の方法で取得できる。
