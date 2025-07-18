@@ -56,7 +56,7 @@ class RakutenStockChecker:
         try:
             response = request.urlopen(url)
             data = json.loads(response.read().decode('utf-8'))
-            logger.info("succeeed checking! URL: ", url)
+            logger.info(f"succeeed checking! URL: {url}")
         except Exception as e:
             logger.error(f"楽天API使用時にエラー発生: {e}")
             return
@@ -92,23 +92,23 @@ class RakutenStockChecker:
                 try:
                     res = self.client.conversations_open(users=user)
                     channel_id = res['channel']['id']
-                    print(f"Channel ID: {channel_id}")
                     self.client.chat_postMessage(
                         channel=channel_id,
                         text=message
                     )
+                    logger.info(f"Sending complete! Channel ID: {channel_id}")
                 except Exception as e:
                     logger.error(f"Slackメッセージ送信エラー: {e}")
-                    logger.info("送信しようとしたメッセージ: ", message)
+                    logger.info(f"送信しようとしたメッセージ: {message}")
                     debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
 
                     res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
                     channel_id = res['channel']['id']
-                    print(f"Channel ID: {channel_id}")
                     self.client.chat_postMessage(
                         channel=channel_id,
                         text=debug_message
                     )
+                    logger.info(f"Sending complete! Channel ID: {channel_id}")
                     continue
             
             self.first_time = False
@@ -124,14 +124,18 @@ class RakutenStockChecker:
                     continue
                 elif item_info['availability'] == "5":
                     availability = '予約受付中'
+                    is_changed = True
                 elif item_info['availability'] == "1":
                     availability = '在庫あり'
+                    is_changed = True
                 else:
                     availability = '不明な状態　要チェック！'
+                    is_changed = True
                     logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
-                if not is_changed:
+                if is_changed:
                     message = "Nintendo Switch 2の販売状況に動きがありました！ \n"
+                    is_changed = False
 
                 message += "--------------------\n" \
                             "商品名: " + item_info['title'] + "\n" \
@@ -139,31 +143,33 @@ class RakutenStockChecker:
                             "在庫状況: " + availability + "\n" \
                             "価格: " + str(item_info['itemPrice']) + "円\n"
             
+            is_changed = False
+
+            if message is not None:
                 message += "--------------------\n" \
                         "以上です。売り切れなければ、5分後にまたお知らせします！\n"
+                for user in send_user:
+                    try:
+                        res = self.client.conversations_open(users=user)
+                        channel_id = res['channel']['id']
+                        self.client.chat_postMessage(
+                            channel=channel_id,
+                            text=message
+                        )
+                        logger.info(f"Sending complete! Channel ID: {channel_id}")
+                    except Exception as e:
+                        logger.error(f"Slackメッセージ送信エラー: {e}")
+                        logger.info(f"送信しようとしたメッセージ: {message}")
+                        debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
 
-            for user in send_user:
-                try:
-                    res = self.client.conversations_open(users=user)
-                    channel_id = res['channel']['id']
-                    print(f"Channel ID: {channel_id}")
-                    self.client.chat_postMessage(
-                        channel=channel_id,
-                        text=message
-                    )
-                except Exception as e:
-                    logger.error(f"Slackメッセージ送信エラー: {e}")
-                    logger.info("送信しようとしたメッセージ: ", message)
-                    debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
-
-                    res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
-                    channel_id = res['channel']['id']
-                    print(f"Channel ID: {channel_id}")
-                    self.client.chat_postMessage(
-                        channel=channel_id,
-                        text=debug_message
-                    )
-                    continue
+                        res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
+                        channel_id = res['channel']['id']
+                        self.client.chat_postMessage(
+                            channel=channel_id,
+                            text=debug_message
+                        )
+                        logger.info(f"Sending complete! Channel ID: {channel_id}")
+                        continue
 
 
 def main():
