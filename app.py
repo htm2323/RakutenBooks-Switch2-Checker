@@ -5,6 +5,7 @@ import yaml
 import json
 from slack_sdk import WebClient
 import logging
+import datetime
 
 # logフォルダが存在しない場合は作成
 os.makedirs('log', exist_ok=True)
@@ -167,6 +168,56 @@ class RakutenStockChecker:
                         )
                         logger.info(f"Sending complete! Channel ID: {channel_id}")
                         continue
+
+        if datetime.datetime.now().hour == 0 and (0 <= datetime.datetime.now().minute or datetime.datetime.now().minute < 5):
+            # 毎日0時に一応通知
+            message = "🕛 日付が変わりました。現在の Nintendo Switch 2 の販売状況をお知らせします。\n"
+            
+            for item in data['Items']:
+                item_info = item['Item']
+
+                if item_info['availability'] == "11":
+                    availability = '❌ 注文できない'
+                elif item_info['availability'] == "5":
+                    availability = '🔵 予約受付中'
+                elif item_info['availability'] == "1":
+                    availability = '🟢 在庫あり'
+                else:
+                    availability = '⚠️不明な状態　要チェック！'
+                    logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
+
+                message += "--------------------\n" \
+                            "商品名: " + item_info['title'] + "\n" \
+                            "商品URL: " + item_info['itemUrl'] + "\n" \
+                            "在庫状況: " + availability + "\n" \
+                            "価格: " + str(item_info['itemPrice']) + "円\n"
+                
+            message += "--------------------\n" \
+                        "今日も5分ごとにチェックして、何か動きがあればお知らせします！\n"
+            
+            logger.info(f"Send message: {message}")
+            for user in send_user:
+                try:
+                    res = self.client.conversations_open(users=user)
+                    channel_id = res['channel']['id']
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=message
+                    )
+                    logger.info(f"Sending complete! Channel ID: {channel_id}")
+                except Exception as e:
+                    logger.error(f"Slackメッセージ送信エラー: {e}")
+                    logger.info(f"送信しようとしたメッセージ: {message}")
+                    debug_message = "Slackメッセージ送信エラー: " + e + "\n" + message
+
+                    res = self.client.conversations_open(users=send_user[0])  # Fallback to first user if error occurs
+                    channel_id = res['channel']['id']
+                    self.client.chat_postMessage(
+                        channel=channel_id,
+                        text=debug_message
+                    )
+                    logger.info(f"Sending complete! Channel ID: {channel_id}")
+                    continue
 
 
 def main():
