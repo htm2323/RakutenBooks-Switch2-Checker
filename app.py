@@ -70,13 +70,13 @@ class RakutenStockChecker:
                 item_info = item['Item']
 
                 if item_info['availability'] == "11":
-                    availability = '注文できない'
+                    availability = '❌ 注文できない'
                 elif item_info['availability'] == "5":
-                    availability = '予約受付中'
+                    availability = '🔵 予約受付中'
                 elif item_info['availability'] == "1":
-                    availability = '在庫あり'
+                    availability = '🟢 在庫あり'
                 else:
-                    availability = '不明な状態　要チェック！'
+                    availability = '⚠️不明な状態　要チェック！'
                     logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
                 message += "--------------------\n" \
@@ -88,6 +88,7 @@ class RakutenStockChecker:
             message += "--------------------\n" \
                         "5分ごとにチェックして、何か動きがあればお知らせします！\n"
             
+            logger.info(f"Send message: {message}")
             for user in send_user:
                 try:
                     res = self.client.conversations_open(users=user)
@@ -120,14 +121,14 @@ class RakutenStockChecker:
                 item_info = item['Item']
 
                 if item_info['availability'] == "11":
-                    availability = '注文できない'
+                    availability = '❌ 注文できない'
                     continue
                 elif item_info['availability'] == "5":
-                    availability = '予約受付中'
+                    availability = '🔵 予約受付中'
                 elif item_info['availability'] == "1":
-                    availability = '在庫あり'
+                    availability = '🟢 在庫あり'
                 else:
-                    availability = '不明な状態　要チェック！'
+                    availability = '⚠️ 不明な状態　要チェック！'
                     logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
                 if is_first:
