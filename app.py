@@ -115,7 +115,7 @@ class RakutenStockChecker:
 
         else:
             message = None
-            is_changed = False
+            is_first = True
             for item in data['Items']:
                 item_info = item['Item']
 
@@ -124,30 +124,26 @@ class RakutenStockChecker:
                     continue
                 elif item_info['availability'] == "5":
                     availability = '予約受付中'
-                    is_changed = True
                 elif item_info['availability'] == "1":
                     availability = '在庫あり'
-                    is_changed = True
                 else:
                     availability = '不明な状態　要チェック！'
-                    is_changed = True
                     logger.info(f"不明な在庫状態: {item_info['title']} - 状態: {item_info['availability']}")
 
-                if is_changed:
-                    message = "Nintendo Switch 2の販売状況に動きがありました！ \n"
-                    is_changed = False
+                if is_first:
+                    message = "📢 Nintendo Switch 2の販売状況に動きがありました！ \n"
+                    is_first = False
 
                 message += "--------------------\n" \
                             "商品名: " + item_info['title'] + "\n" \
                             "商品URL: " + item_info['itemUrl'] + "\n" \
                             "在庫状況: " + availability + "\n" \
                             "価格: " + str(item_info['itemPrice']) + "円\n"
-            
-            is_changed = False
 
             if message is not None:
                 message += "--------------------\n" \
                         "以上です。売り切れなければ、5分後にまたお知らせします！\n"
+                logger.info(f"Send message: {message}")
                 for user in send_user:
                     try:
                         res = self.client.conversations_open(users=user)
