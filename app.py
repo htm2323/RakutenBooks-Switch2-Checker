@@ -169,7 +169,7 @@ class RakutenStockChecker:
                         logger.info(f"Sending complete! Channel ID: {channel_id}")
                         continue
 
-        if datetime.datetime.now().hour == 14 and (50 <= datetime.datetime.now().minute and datetime.datetime.now().minute < 55):
+        if datetime.datetime.now().hour == 0 and (0 <= datetime.datetime.now().minute and datetime.datetime.now().minute < 5):
             # 毎日0時に一応通知
             message = "🕛 日付が変わりました。現在の Nintendo Switch 2 の販売状況をお知らせします。\n"
             
